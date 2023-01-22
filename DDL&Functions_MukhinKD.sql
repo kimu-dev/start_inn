@@ -34,6 +34,8 @@ end;
 $$ language plpgsql;
 */
 
+
+
 -- Создание таблицы и полседовательности для хранения городов:
 create table if not exists cities (
 	city_id bigint,
@@ -925,13 +927,19 @@ begin
 	if not exists (select * from information_schema.tables where table_name in ('metrics_5', 'metrics_6', 'metrics_7')) then 
 		if period_start_ is not null and period_stop_ is not null then
 			raise notice 'Rezult: %', row_text_s; -- 1700
-			open ref_cursor for execute format('select m.city_id, m.metrics_insdt, %s 
+			foreach row_list_x in array(select string_to_array(metrics_, ', ')) 
+		  	loop     
+		    	row_list_y := array_append(row_list_y, 'sum('||row_list_x||')'||' '||'over(partition by m.city_id order by m.metrics_insdt)'||' '||'as'||' '||row_list_x);
+			end loop;
+		  	row_fin := array_to_string(row_list_y, ', ');  
+			
+			open ref_cursor for execute format('select distinct m.city_id, m.metrics_insdt, %s 
 			from metrics m
 			inner join metrics_1 m1 on m1.surname = m.surname and m1.firname = m.firname and m1.city_id = m.city_id and m1.metrics_insdt = m.metrics_insdt
 			inner join metrics_2 m2 on m2.surname = m.surname and m2.firname = m.firname and m2.city_id = m.city_id and m2.metrics_insdt = m.metrics_insdt
 			inner join metrics_3 m3 on m3.surname = m.surname and m3.firname = m.firname and m3.city_id = m.city_id and m3.metrics_insdt = m.metrics_insdt
 			inner join metrics_4 m4 on m4.surname = m.surname and m4.firname = m.firname and m4.city_id = m.city_id and m4.metrics_insdt = m.metrics_insdt
-			where m.metrics_insdt between $1 and $2 order by m.city_id', metrics_) using period_start_, period_stop_;
+			where m.metrics_insdt between $1 and $2 order by m.city_id', row_fin) using period_start_, period_stop_;
 			return ref_cursor;
 		elsif period_d_w_m_ is not null then
 			if period_d_w_m_ = 'DY' then
@@ -984,19 +992,31 @@ begin
 				return ref_cursor;
 			end if;			
 		elsif period_d_w_m_ is null and period_start_ is null and period_stop_ is null then
-			open ref_cursor for execute format('select m.city_id, m.metrics_insdt, %s 
+			foreach row_list_x in array(select string_to_array(metrics_, ', ')) 
+		  	loop     
+		    	row_list_y := array_append(row_list_y, 'sum('||row_list_x||')'||' '||'over(partition by m.city_id order by m.metrics_insdt)'||' '||'as'||' '||row_list_x);
+			end loop;
+		  	row_fin := array_to_string(row_list_y, ', '); 
+		
+			open ref_cursor for execute format('select distinct m.city_id, m.metrics_insdt, %s 
 			from metrics m
 			inner join metrics_1 m1 on m1.surname = m.surname and m1.firname = m.firname and m1.city_id = m.city_id and m1.metrics_insdt = m.metrics_insdt
 			inner join metrics_2 m2 on m2.surname = m.surname and m2.firname = m.firname and m2.city_id = m.city_id and m2.metrics_insdt = m.metrics_insdt
 			inner join metrics_3 m3 on m3.surname = m.surname and m3.firname = m.firname and m3.city_id = m.city_id and m3.metrics_insdt = m.metrics_insdt
 			inner join metrics_4 m4 on m4.surname = m.surname and m4.firname = m.firname and m4.city_id = m.city_id and m4.metrics_insdt = m.metrics_insdt
-			order by m.city_id', metrics_);
+			order by m.city_id', row_fin);
 			return ref_cursor;
 		end if;
 	else 
 		if period_start_ is not null and period_stop_ is not null then
 			raise notice 'Rezult: %', row_text_b; -- 2700
-			open ref_cursor for execute format('select m.city_id, m.metrics_insdt, %s 
+			foreach row_list_x in array(select string_to_array(metrics_, ', ')) 
+		  	loop     
+		    	row_list_y := array_append(row_list_y, 'sum('||row_list_x||')'||' '||'over(partition by m.city_id order by m.metrics_insdt)'||' '||'as'||' '||row_list_x);
+			end loop;
+		  	row_fin := array_to_string(row_list_y, ', '); 
+			
+			open ref_cursor for execute format('select distinct m.city_id, m.metrics_insdt, %s 
 			from metrics m
 			inner join metrics_1 m1 on m1.surname = m.surname and m1.firname = m.firname and m1.city_id = m.city_id and m1.metrics_insdt = m.metrics_insdt
 			inner join metrics_2 m2 on m2.surname = m.surname and m2.firname = m.firname and m2.city_id = m.city_id and m2.metrics_insdt = m.metrics_insdt
@@ -1005,7 +1025,7 @@ begin
 			inner join metrics_5 m4 on m5.surname = m.surname and m5.firname = m.firname and m5.city_id = m.city_id and m5.metrics_insdt = m.metrics_insdt
 			inner join metrics_6 m4 on m6.surname = m.surname and m6.firname = m.firname and m6.city_id = m.city_id and m6.metrics_insdt = m.metrics_insdt
 			inner join metrics_7 m4 on m7.surname = m.surname and m7.firname = m.firname and m7.city_id = m.city_id and m7.metrics_insdt = m.metrics_insdt
-			where m.metrics_insdt between $1 and $2) order by m.city_id', metrics_) using period_start_, period_stop_;
+			where m.metrics_insdt between $1 and $2) order by m.city_id', row_fin) using period_start_, period_stop_;
 			return ref_cursor;
 		elsif period_d_w_m_ is not null then
 			if period_d_w_m_ = 'DY' then
@@ -1066,8 +1086,14 @@ begin
 				order by city_id', metrics_, row_fin) using month_;
 				return ref_cursor;
 			end if;					
-		elsif period_d_w_m_ is null and and period_start_ is null and period_stop_ is null then
-			open ref_cursor for execute format('select m.city_id, m.metrics_insdt, %s 
+		elsif period_d_w_m_ is null and period_start_ is null and period_stop_ is null then
+			foreach row_list_x in array(select string_to_array(metrics_, ', ')) 
+		  	loop     
+		    	row_list_y := array_append(row_list_y, 'sum('||row_list_x||')'||' '||'over(partition by m.city_id order by m.metrics_insdt)'||' '||'as'||' '||row_list_x);
+			end loop;
+		  	row_fin := array_to_string(row_list_y, ', '); 
+		
+			open ref_cursor for execute format('select distinct m.city_id, m.metrics_insdt, %s 
 			from metrics m
 			inner join metrics_1 m1 on m1.surname = m.surname and m1.firname = m.firname and m1.city_id = m.city_id and m1.metrics_insdt = m.metrics_insdt
 			inner join metrics_2 m2 on m2.surname = m.surname and m2.firname = m.firname and m2.city_id = m.city_id and m2.metrics_insdt = m.metrics_insdt
@@ -1076,7 +1102,7 @@ begin
 			inner join metrics_5 m4 on m5.surname = m.surname and m5.firname = m.firname and m5.city_id = m.city_id and m5.metrics_insdt = m.metrics_insdt
 			inner join metrics_6 m4 on m6.surname = m.surname and m6.firname = m.firname and m6.city_id = m.city_id and m6.metrics_insdt = m.metrics_insdt
 			inner join metrics_7 m4 on m7.surname = m.surname and m7.firname = m.firname and m7.city_id = m.city_id and m7.metrics_insdt = m.metrics_insdt
-			order m.city_id', metrics_);
+			order m.city_id', row_fin);
 			return ref_cursor;
 		end if;
 	end if;
@@ -1092,7 +1118,7 @@ commit transaction;
 -- Выводим рефкурсор(определенный период):
 begin transaction;
 select find_city_metrics(metrics_ => 'twsph, ezevs',
-period_start_ => '2022-01-01 00:00:00.000', period_stop_ => '2022-01-02 10:00:00.000');
+period_start_ => '2022-01-01 03:00:00.000', period_stop_ => '2022-01-02 10:00:00.000');
 fetch all in ref_cursor;
 commit transaction;
 
@@ -1122,3 +1148,35 @@ inner join metrics_2 m2 on m2.surname = m.surname and m2.firname = m.firname and
 select distinct city_id, period_day, sum(twsph) over(partition by city_id order by period_day) as twsph from cte
 order by city_id;
 */
+
+/*
+with cte as (select m.city_id, date_trunc('month', m.metrics_insdt) as period_day, twsph 
+from metrics m
+inner join metrics_1 m1 on m1.surname = m.surname and m1.firname = m.firname and m1.city_id = m.city_id and m1.metrics_insdt = m.metrics_insdt
+inner join metrics_2 m2 on m2.surname = m.surname and m2.firname = m.firname and m2.city_id = m.city_id and m2.metrics_insdt = m.metrics_insdt
+inner join metrics_3 m3 on m3.surname = m.surname and m3.firname = m.firname and m3.city_id = m.city_id and m3.metrics_insdt = m.metrics_insdt
+inner join metrics_4 m4 on m4.surname = m.surname and m4.firname = m.firname and m4.city_id = m.city_id and m4.metrics_insdt = m.metrics_insdt)
+select distinct city_id, period_day, sum(twsph) over(partition by city_id order by period_day) as twsph from cte
+order by city_id;
+*/
+
+/*
+select distinct m.city_id, m.metrics_insdt, sum(twsph) over(partition by m.city_id order by m.metrics_insdt) as twsph
+from metrics m
+inner join metrics_1 m1 on m1.surname = m.surname and m1.firname = m.firname and m1.city_id = m.city_id and m1.metrics_insdt = m.metrics_insdt
+inner join metrics_2 m2 on m2.surname = m.surname and m2.firname = m.firname and m2.city_id = m.city_id and m2.metrics_insdt = m.metrics_insdt
+inner join metrics_3 m3 on m3.surname = m.surname and m3.firname = m.firname and m3.city_id = m.city_id and m3.metrics_insdt = m.metrics_insdt
+inner join metrics_4 m4 on m4.surname = m.surname and m4.firname = m.firname and m4.city_id = m.city_id and m4.metrics_insdt = m.metrics_insdt
+where m.metrics_insdt between '2022-01-01 03:00:00.000' and '2022-01-02 10:00:00.000' order by m.city_id;
+*/
+
+create index idx_city on metrics(city_id, metrics_insdt);
+create index idx_city_1 on metrics_1(city_id, metrics_insdt);
+create index idx_city_2 on metrics_2(city_id, metrics_insdt);
+create index idx_city_3 on metrics_3(city_id, metrics_insdt);
+create index idx_city_4 on metrics_4(city_id, metrics_insdt);
+create index idx_city_5 on metrics_2(city_id, metrics_insdt);
+create index idx_city_6 on metrics_3(city_id, metrics_insdt);
+create index idx_city_7 on metrics_4(city_id, metrics_insdt);
+
+
